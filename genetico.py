@@ -10,13 +10,22 @@ import time
 def distancia(ciudad1, ciudad2):
     return np.sqrt((ciudad1[0] - ciudad2[0])**2 + (ciudad1[1] - ciudad2[1])**2)
 
-def calcular_distancia_total(ruta, ciudades):
+def calcular_distancia_total(ruta, ciudades=None, dist_matrix=None):
+    if dist_matrix is not None:
+        total = 0.0
+        n = len(ruta)
+        for i in range(n):
+            a = ruta[i]
+            b = ruta[(i+1) % n]
+            total += dist_matrix[a, b]
+        return total
     total = 0.0
     for i in range(len(ruta)):
         a = ciudades[ruta[i]]
         b = ciudades[ruta[(i+1) % len(ruta)]]
-        total += distancia(a, b)
+        total += ((a[0]-b[0])**2 + (a[1]-b[1])**2) ** 0.5
     return total
+
 
 # =====================
 # POBLACIÓN / OPERADORES
@@ -79,6 +88,7 @@ def algoritmo_genetico(
     porc_elite=0.02,
     porc_cruce=0.7,
     prob_mut=0.2,
+    dist_matrix=None,
     selec_method="torneo",  # "torneo" o "ruleta"
     torneo_k=3,
     seed=None,
@@ -112,7 +122,7 @@ def algoritmo_genetico(
 
     for gen in range(n_iter):
         t0 = time.time()
-        fitness = [calcular_distancia_total(ind, ciudades) for ind in poblacion]
+        fitness = [calcular_distancia_total(ind, ciudades, dist_matrix) for ind in poblacion]
         # ordenar población por fitness ascendente
         pop_fit = sorted(zip(poblacion, fitness), key=lambda x: x[1])
         # actualizar mejor global
