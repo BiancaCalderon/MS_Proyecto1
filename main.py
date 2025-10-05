@@ -82,15 +82,18 @@ def run_ga(coords, D, args):
             diversidad = None
         return mejor_ruta, mejor_dist, historial, diversidad, elapsed
     except TypeError:
-        # Intento 2: API antigua (solo coords, sin dist_matrix)
+        # Intento 2: API antigua -> ahora también pedimos return_all=True
         start = time.time()
-        res = algoritmo_genetico(coords, **ga_kwargs)
+        res = algoritmo_genetico(coords, return_all=True, **ga_kwargs)  # 👈 aquí
         elapsed = time.time() - start
-        if isinstance(res, tuple) and len(res) >= 3:
+        # compatibilidad: acepta 3 o 5 elementos
+        if isinstance(res, tuple) and len(res) == 5:
+            mejor_ruta, mejor_dist, historial, diversidad, _ = res
+        elif isinstance(res, tuple) and len(res) >= 3:
             mejor_ruta, mejor_dist, historial = res[:3]
+            diversidad = None
         else:
-            mejor_ruta, mejor_dist, historial = res, None, None
-        diversidad = None
+            mejor_ruta, mejor_dist, historial, diversidad = res, None, None, None
         return mejor_ruta, mejor_dist, historial, diversidad, elapsed
 
 

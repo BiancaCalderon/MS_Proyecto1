@@ -92,8 +92,9 @@ def algoritmo_genetico(
     torneo_k=3,
     seed=None,
     return_all=False,
-    porc_mut=None,          # 👈 NUEVO: % de población creada por mutación "pura"
-    dist_matrix=None,       # si ya lo usas, consérvalo; si no, bórralo
+    porc_mut=None,
+    dist_matrix=None,
+    on_generation=None,
 ):
     """
     - porc_mut: fracción creada por mutación (distinta de prob_mut).
@@ -140,7 +141,11 @@ def algoritmo_genetico(
 
         historial.append(mejor_distancia)
         historial_diversity.append(medir_diversidad([p for p,_ in pop_fit]))
-
+        if on_generation is not None:
+            try:
+                on_generation(gen, mejor_ruta, mejor_distancia)
+            except Exception:
+                pass
         nueva = []
 
         nueva.extend([pf[0][:] for pf in pop_fit[:elite_size]])
