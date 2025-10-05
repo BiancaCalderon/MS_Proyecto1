@@ -88,83 +88,85 @@ def algoritmo_genetico(
     porc_elite=0.02,
     porc_cruce=0.7,
     prob_mut=0.2,
-    dist_matrix=None,
-    selec_method="torneo",  # "torneo" o "ruleta"
+    selec_method="torneo",
     torneo_k=3,
     seed=None,
-    return_all=False
+    return_all=False,
+    porc_mut=None,          # 👈 NUEVO: % de población creada por mutación "pura"
+    dist_matrix=None,       # si ya lo usas, consérvalo; si no, bórralo
 ):
     """
-    Ejecuta un GA para TSP.
-    - porc_elite: fracción de población conservada como élite (ej: 0.02)
-    - porc_cruce: fracción de población creada por cruce (resto se rellena con mutaciones / elites)
-    - prob_mut: probabilidad de mutación aplicada a cada hijo (si se aplica)
-    - selec_method: "torneo" o "ruleta"
-    - return_all: si True devuelve (mejor_ruta, mejor_dist, historial, historial_diversity, tiempos)
+    - porc_mut: fracción creada por mutación (distinta de prob_mut).
+      Si es None, se toma el remanente: max(0, 1 - porc_elite - porc_cruce).
+      Los hijos "mutación" se generan seleccionando un individuo base y aplicando swap obligado (≥1).
+    - prob_mut: prob. de mutación aplicada a CADA hijo de cruce.
     """
     if seed is not None:
-        random.seed(seed)
-        np.random.seed(seed)
+        random.seed(seed); np.random.seed(seed)
 
-    n_ciudades = len(ciudades)
+    n_ciudades = len(ciudades) if ciudades is not None else (dist_matrix.shape[0] if dist_matrix is not None else None)
     poblacion = crear_poblacion(n_ciudades, n_poblacion, seed=seed)
 
-    elite_size = max(1, int(porc_elite * n_poblacion))
-    num_cruce = max(1, int(porc_cruce * n_poblacion))
-    # Asegurar no exceder población
-    num_cruce = min(num_cruce, n_poblacion - elite_size)
+    # ---- Cálculo de cupos ----
+    if porc_mut is None:
+        porc_mut = max(0.0, 1.0 - (porc_elite + porc_cruce))
 
-    mejor_ruta = None
-    mejor_distancia = float("inf")
-    historial = []
-    historial_diversity = []
-    tiempos = []
+    elite_size = max(1, int(porc_elite * n_poblacion))
+    num_cruce  = max(0, int(porc_cruce * n_poblacion))
+    # recorta cruce para no pasarte del total
+    num_cruce  = min(num_cruce, n_poblacion - elite_size)
+
+    num_mut    = max(0, int(porc_mut * n_poblacion))
+    # recorta mutación para no pasarte del total
+    num_mut    = min(num_mut, n_poblacion - elite_size - num_cruce)
+
+    # lo que queda se llena con individuos aleatorios (para diversidad)
+    num_random = max(0, n_poblacion - elite_size - num_cruce - num_mut)
+
+    mejor_ruta, mejor_distancia = None, float("inf")
+    historial, historial_diversity, tiempos = [], [], []
 
     for gen in range(n_iter):
         t0 = time.time()
-        fitness = [calcular_distancia_total(ind, ciudades, dist_matrix) for ind in poblacion]
-        # ordenar población por fitness ascendente
+        # fitness
+        fitness = [
+            calcular_distancia_total(ind, ciudades, dist_matrix=dist_matrix) for ind in poblacion
+        ]
         pop_fit = sorted(zip(poblacion, fitness), key=lambda x: x[1])
-        # actualizar mejor global
+
         if pop_fit[0][1] < mejor_distancia:
             mejor_distancia = pop_fit[0][1]
             mejor_ruta = pop_fit[0][0][:]
+
         historial.append(mejor_distancia)
-        # diversidad
-        div = medir_diversidad([p for p, f in pop_fit])
-        historial_diversity.append(div)
+        historial_diversity.append(medir_diversidad([p for p,_ in pop_fit]))
 
-        # formar nueva población: conservar élite
-        nueva_poblacion = [pf[0][:] for pf in pop_fit[:elite_size]]
+        nueva = []
 
-        # crear hijos por cruce
-        while len(nueva_poblacion) < elite_size + num_cruce:
-            # seleccionar padres
+        nueva.extend([pf[0][:] for pf in pop_fit[:elite_size]])
+
+        def pick():
             if selec_method == "torneo":
-                padre1 = seleccion_torneo(poblacion, fitness, k=torneo_k)
-                padre2 = seleccion_torneo(poblacion, fitness, k=torneo_k)
-            else:
-                padre1 = seleccion_ruleta(poblacion, fitness)
-                padre2 = seleccion_ruleta(poblacion, fitness)
-            hijo = cruce_OX(padre1, padre2)
+                return seleccion_torneo(poblacion, fitness, k=torneo_k)
+            return seleccion_ruleta(poblacion, fitness)
+
+        while len(nueva) < elite_size + num_cruce:
+            p1, p2 = pick(), pick()
+            hijo = cruce_OX(p1, p2)
             if random.random() < prob_mut:
                 hijo = mutacion_swap(hijo)
-            nueva_poblacion.append(hijo)
+            nueva.append(hijo)
 
-        # rellenar el resto de la población: mutaciones de elites o permutaciones aleatorias
-        while len(nueva_poblacion) < n_poblacion:
-            if random.random() < 0.5:
-                # mutar una elite
-                base = random.choice(nueva_poblacion[:max(1, len(nueva_poblacion))])
-                hijo = base[:]
-                if random.random() < prob_mut:
-                    hijo = mutacion_swap(hijo)
-                nueva_poblacion.append(hijo)
-            else:
-                # individuo aleatorio
-                nueva_poblacion.append(list(np.random.permutation(n_ciudades)))
+        while len(nueva) < elite_size + num_cruce + num_mut:
+            base = pick()                    
+            hijo = base[:]
+            hijo = mutacion_swap(hijo)      
+            nueva.append(hijo)
 
-        poblacion = nueva_poblacion[:n_poblacion]
+        while len(nueva) < n_poblacion:
+            nueva.append(list(np.random.permutation(n_ciudades)))
+
+        poblacion = nueva
         tiempos.append(time.time() - t0)
 
     if return_all:

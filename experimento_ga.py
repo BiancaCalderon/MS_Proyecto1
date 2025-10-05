@@ -18,9 +18,9 @@ RESULTS_DIR = "results"
 
 # Parámetros del GA para cada instancia
 PARAMS = {
-    "eil101": dict(n_poblacion=300, n_iter=1000, porc_elite=0.02, porc_cruce=0.7, prob_mut=0.2, selec_method="torneo"),
-    "gr229": dict(n_poblacion=500, n_iter=1500, porc_elite=0.02, porc_cruce=0.7, prob_mut=0.2, selec_method="torneo"),
-    "inventado": dict(n_poblacion=200, n_iter=800, porc_elite=0.02, porc_cruce=0.7, prob_mut=0.2, selec_method="torneo")
+    "eil101":   dict(n_poblacion=300, n_iter=1000, porc_elite=0.02, porc_cruce=0.68, porc_mut=0.30, prob_mut=0.2, selec_method="torneo"),
+    "gr229":    dict(n_poblacion=500, n_iter=1500, porc_elite=0.02, porc_cruce=0.68, porc_mut=0.30, prob_mut=0.2, selec_method="torneo"),
+    "inventado":dict(n_poblacion=200, n_iter=800,  porc_elite=0.02, porc_cruce=0.68, porc_mut=0.30, prob_mut=0.2, selec_method="torneo"),
 }
 
 def correr_lp(time_limit=3600, msg=False):

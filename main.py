@@ -62,6 +62,7 @@ def run_ga(coords, D, args):
         selec_method=args.selec_method,
         torneo_k=args.torneo_k,
         seed=args.seed,
+        porc_mut=args.porc_mut,     # 👈 pasar al GA
     )
 
     # Intento 1: API nueva con dist_matrix + return_all
@@ -140,7 +141,7 @@ def main():
     parser.add_argument("--base", default="data", help="Carpeta base de instancias .tsp")
     parser.add_argument("--time_limit", type=int, default=3600, help="Límite de tiempo LP (s)")
     parser.add_argument("--lp-msg", action="store_true", help="Mensajes del solver LP")
-
+    parser.add_argument("--porc_mut", type=float, default=None, help="fracción de población creada por mutación pura")
     # Hiperparámetros GA
     parser.add_argument("--n_poblacion", type=int, default=300)
     parser.add_argument("--n_iter", type=int, default=1000)
